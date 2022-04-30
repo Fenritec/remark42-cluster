@@ -1,0 +1,82 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: remark42
+  namespace: remark42
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: remark42
+  template:
+    metadata:
+      labels:
+        app: remark42
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: remark42
+        image: umputun/remark42:latest
+        imagePullPolicy: IfNotPresent
+        name: remark42
+        ports:
+        - containerPort: 4443
+          name: websecure
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /etc/remark42/ssl
+          name: certs
+          readOnly: true
+        - mountPath: /etc/ssl/certs
+          name: system-ca
+          readOnly: true
+        - mountPath: /etc/timezone
+          name: timezone
+          readOnly: true
+        - mountPath: /etc/localtime
+          name: localtime
+          readOnly: true
+        - name: tmp-data
+          mountPath: /srv/var
+      - envFrom:
+        - secretRef:
+            name: remark42-cluster
+        image: fenritec/remark42-cluster:latest
+        imagePullPolicy: IfNotPresent
+        name: remark42-cluster
+        ports:
+        - containerPort: 4443
+          name: websecure
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /etc/ssl/certs
+          name: system-ca
+          readOnly: true
+        - mountPath: /etc/timezone
+          name: timezone
+          readOnly: true
+        - mountPath: /etc/localtime
+          name: localtime
+          readOnly: true
+      restartPolicy: Always
+      volumes:
+      - name: certs
+        secret:
+          secretName: remark42-tls
+      - hostPath:
+          path: /etc/ssl/certs
+          type: Directory
+        name: system-ca
+      - hostPath:
+          path: /etc/timezone
+          type: File
+        name: timezone
+      - hostPath:
+          path: /etc/localtime
+          type: File
+        name: localtime
+      - name: tmp-data
+        emptyDir: {}
